@@ -4,6 +4,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { RecentProposals } from "@/components/dashboard/RecentProposals";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { OpportunityScore } from "@/components/dashboard/OpportunityScore";
+import { MarketplaceDashboardCard } from "@/components/marketplace/MarketplaceDashboardCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function DashboardPage() {
   return (
@@ -14,6 +16,7 @@ export default function DashboardPage() {
         <OpportunityScore />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
+        <MarketplaceDashboardCard />
         <ActivityTimeline />
       </div>
     </div>

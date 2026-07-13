@@ -4,7 +4,7 @@ Aggregates all v1 endpoint routers under a single APIRouter.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import ai_settings, auth, categories, clients, imports, integrations, notification_preferences, opportunities, preferences, projects, proposal_templates, proposals, statistics, technologies, users
+from app.api.v1.endpoints import ai_settings, auth, categories, clients, imports, integrations, marketplace, notification_preferences, opportunities, preferences, projects, proposal_templates, proposals, statistics, technologies, users
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -22,3 +22,4 @@ api_router.include_router(opportunities.router)
 api_router.include_router(integrations.router)
 api_router.include_router(imports.router)
 api_router.include_router(statistics.router)
+api_router.include_router(marketplace.router)

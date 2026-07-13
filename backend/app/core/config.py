@@ -91,6 +91,7 @@ class Settings(BaseSettings):
     FREELANCER_CLIENT_ID: str | None = Field(default=None)
     FREELANCER_CLIENT_SECRET: str | None = Field(default=None)
     FRONTEND_URL: str = Field(default="http://localhost:3000")
+    TOKEN_ENCRYPTION_KEY: str | None = Field(default=None)
 
     # --- Logging ---
     LOG_LEVEL: str = Field(default="INFO")

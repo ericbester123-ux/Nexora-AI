@@ -22,6 +22,9 @@ from app.models.proposal_version import ProposalVersion
 from app.models.ai_usage_log import AIUsageLog
 from app.models.proposal_note import ProposalNote
 from app.models.audit_log import AuditLog
+from app.models.marketplace_account import MarketplaceAccount
+from app.models.marketplace_token import MarketplaceToken
+from app.models.marketplace_sync_history import MarketplaceSyncHistory
 from app.models.proposal_status_history import ProposalStatusHistory
 
-__all__ = ["Proposal", "RevokedToken", "Technology", "User", "UserPreference", "AIPreference", "NotificationPreference", "Project", "ProjectCategoryLink", "ProjectTechnology", "ProjectCategory", "Client", "ProposalTemplate", "Opportunity", "ImportHistory", "ProposalVersion", "AIUsageLog", "ProposalNote", "AuditLog", "ProposalStatusHistory"]
+__all__ = ["Proposal", "RevokedToken", "Technology", "User", "UserPreference", "AIPreference", "NotificationPreference", "Project", "ProjectCategoryLink", "ProjectTechnology", "ProjectCategory", "Client", "ProposalTemplate", "Opportunity", "ImportHistory", "ProposalVersion", "AIUsageLog", "ProposalNote", "AuditLog", "ProposalStatusHistory", "MarketplaceAccount", "MarketplaceToken", "MarketplaceSyncHistory"]

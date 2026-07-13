@@ -13,6 +13,7 @@ import {
   Compass,
   LogOut,
   Sparkles,
+  Plug,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/jobs", label: "Jobs", icon: Briefcase },
   { href: "/opportunities", label: "Opportunities", icon: Compass },
   { href: "/proposals", label: "Proposals", icon: FileText },
+  { href: "/settings/connections", label: "Connections", icon: Plug },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },

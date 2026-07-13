@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Optional
 
+from cryptography.fernet import Fernet
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, ValidationError
@@ -116,3 +117,26 @@ def decode_token(token: str, expected_type: Optional[TokenType] = None) -> Token
         )
 
     return payload
+
+
+# --- Token encryption (Fernet) ---
+
+
+def get_fernet() -> Fernet:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    key = settings.TOKEN_ENCRYPTION_KEY
+    if key is None:
+        raise RuntimeError("TOKEN_ENCRYPTION_KEY is not configured")
+    return Fernet(key.encode() if isinstance(key, str) else key)
+
+
+def encrypt_token(plain_text: str) -> str:
+    f = get_fernet()
+    return f.encrypt(plain_text.encode()).decode()
+
+
+def decrypt_token(encrypted_text: str) -> str:
+    f = get_fernet()
+    return f.decrypt(encrypted_text.encode()).decode()

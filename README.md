@@ -256,3 +256,81 @@ GitHub Actions runs on every push:
 ## License
 
 Private. All rights reserved.
+
+## Sprint 10 — Freelancer Account Integration
+
+### Architecture
+
+The marketplace integration is built on a layered architecture:
+
+```
+┌─────────────────────────────────────────────┐
+│              Frontend (Next.js)              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │
+│  │Connection│ │Dashboard │ │   Analytics   │ │
+│  │  Page    │ │   Card   │ │    Page       │ │
+│  └────┬─────┘ └────┬─────┘ └──────┬───────┘ │
+│       │            │              │          │
+│  ┌────┴────────────┴──────────────┴───────┐  │
+│  │         marketplace.service.ts          │  │
+│  └────────────────┬───────────────────────┘  │
+└───────────────────┼──────────────────────────┘
+                    │ HTTP / REST
+┌───────────────────┼──────────────────────────┐
+│  Backend (FastAPI)│                          │
+│  ┌────────────────┴───────────────────────┐  │
+│  │       /api/v1/marketplace/*            │  │
+│  └────────────────┬───────────────────────┘  │
+│  ┌────────────────┼───────────────────────┐  │
+│  │   MarketplaceAuthService / SyncService │  │
+│  └────────────────┬───────────────────────┘  │
+│  ┌────────────────┼───────────────────────┐  │
+│  │   MarketplaceProvider (Interface)      │  │
+│  │   ┌────────────┴────────────┐         │  │
+│  │   │  FreelancerProvider     │         │  │
+│  │   │  (UpworkProvider)       │         │  │
+│  │   │  (Future providers)     │         │  │
+│  │   └─────────────────────────┘         │  │
+│  └─────────────────────────────────────────┘  │
+└───────────────────────────────────────────────┘
+```
+
+### Database Schema
+
+New tables:
+- **marketplace_accounts** — Connected marketplace accounts per user
+- **marketplace_tokens** — Encrypted OAuth tokens per account
+- **marketplace_sync_history** — Sync operation logs per account
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/marketplace/accounts` | List connected accounts |
+| GET | `/api/v1/marketplace/accounts/{id}` | Get account details |
+| GET | `/api/v1/marketplace/{provider}/auth-url` | Get OAuth authorization URL |
+| POST | `/api/v1/marketplace/{provider}/exchange-code` | Exchange OAuth code for tokens |
+| POST | `/api/v1/marketplace/{provider}/direct-connect` | Connect with existing token |
+| DELETE | `/api/v1/marketplace/accounts/{id}` | Disconnect account |
+| POST | `/api/v1/marketplace/accounts/{id}/reconnect` | Reconnect (token refresh) |
+| POST | `/api/v1/marketplace/accounts/{id}/sync` | Trigger sync |
+| GET | `/api/v1/marketplace/accounts/{id}/sync-history` | Sync history |
+| GET | `/api/v1/marketplace/sync-status` | All sync statuses |
+| GET | `/api/v1/marketplace/accounts/{id}/stats` | Analytics per account |
+
+### Environment Variables
+
+```
+TOKEN_ENCRYPTION_KEY=<fernet-key>
+FRONTEND_URL=http://localhost:3000
+FREELANCER_CLIENT_ID=<oauth-client-id>
+FREELANCER_CLIENT_SECRET=<oauth-client-secret>
+```
+
+### Testing
+
+```bash
+# Run marketplace-specific tests
+pytest tests/unit/test_marketplace_models.py -v
+pytest tests/unit/test_marketplace_services.py -v
+```
