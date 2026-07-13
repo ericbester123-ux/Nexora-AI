@@ -37,12 +37,11 @@ class FreelancerProvider(BaseOpportunityProvider, MarketplaceProvider):
     async def get_auth_url(self, state: str, redirect_uri: str) -> str:
         params = {
             "response_type": "code",
-            "client_id": "{client_id}",
             "redirect_uri": redirect_uri,
             "scope": "basic profile projects",
-            "state": state,
             "prompt": "consent",
         }
+        params["state"] = state
         return f"{self._base_url}/oauth/authorize?{urlencode(params)}"
 
     async def exchange_code(self, code: str, redirect_uri: str, client_id: str, client_secret: str) -> dict:

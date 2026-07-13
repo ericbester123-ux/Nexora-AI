@@ -189,7 +189,8 @@ async def get_auth_url(
 
     # Build auth URL with actual client_id
     auth_url = await freelancer_provider.get_auth_url(state, redirect_uri)
-    auth_url = auth_url.replace("{client_id}", settings.FREELANCER_CLIENT_ID or "")
+    if settings.FREELANCER_CLIENT_ID:
+        auth_url = f"{auth_url}&client_id={settings.FREELANCER_CLIENT_ID}"
 
     return MarketplaceAuthUrlResponse(auth_url=auth_url, state=state)
 
