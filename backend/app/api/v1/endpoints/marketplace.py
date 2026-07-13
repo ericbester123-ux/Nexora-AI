@@ -24,6 +24,7 @@ from app.infrastructure.providers.freelancer_provider import FreelancerProvider
 from app.services.marketplace_auth_service import MarketplaceAuthService
 from app.services.marketplace_sync_service import MarketplaceSyncService
 from app.services.marketplace_analytics_service import MarketplaceAnalyticsService
+from app.services.opportunity_service import OpportunityService
 from app.repositories.marketplace_account_repository import MarketplaceAccountRepository
 from app.repositories.marketplace_token_repository import MarketplaceTokenRepository
 from app.schemas.auth import MessageResponse
@@ -244,6 +245,7 @@ async def exchange_code_and_connect(
     payload: MarketplaceExchangeCodeRequest,
     current_user: CurrentUser,
     auth_service: Annotated[MarketplaceAuthService, Depends(get_marketplace_auth_service)],
+    sync_service: Annotated[MarketplaceSyncService, Depends(get_marketplace_sync_service)],
 ) -> MarketplaceConnectResponse:
     """Exchange authorization code for access token and connect the marketplace account."""
     if provider != "freelancer":
@@ -259,6 +261,19 @@ async def exchange_code_and_connect(
         code=payload.code,
         redirect_uri=redirect_uri,
     )
+
+    # Auto-sync projects immediately after connection
+    try:
+        await sync_service.sync_account(
+            user_id=current_user.id,
+            account_id=uuid.UUID(result["id"]),
+            provider=freelancer_provider,
+            marketplace_provider=freelancer_provider,
+            max_results=200,
+        )
+        result["message"] += " Projects synced successfully."
+    except Exception:
+        result["message"] += " Connection successful. Sync will retry shortly."
 
     return MarketplaceConnectResponse(**result)
 
