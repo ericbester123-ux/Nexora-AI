@@ -51,7 +51,6 @@ unit-testable without a database.
 ## Quick Start (Docker Compose)
 
 ```bash
-cp .env.example .env
 # Edit .env and set a strong JWT_SECRET_KEY:
 #   openssl rand -hex 32
 
@@ -68,8 +67,6 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
 pip install -r requirements-dev.txt
-
-cp .env.example .env
 # Edit .env: set JWT_SECRET_KEY and point DATABASE_URL at a local Postgres instance.
 
 # Run migrations
@@ -110,7 +107,7 @@ alembic downgrade -1
 ## Environment Variables
 
 All configuration is sourced from environment variables — see
-[`.env.example`](.env.example) for the authoritative list. Summary:
+[`.env`](.env) for the authoritative list. Summary:
 
 | Variable | Description | Required |
 |---|---|---|

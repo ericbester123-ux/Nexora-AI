@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     """
     Central application settings.
 
-    Values are sourced from environment variables. See `.env.example` for
+    Values are sourced from environment variables. See `.env` for
     the full list of variables required to run the application.
     """
 

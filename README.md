@@ -18,9 +18,9 @@ git clone <repo-url> nexora-ai
 cd nexora-ai
 
 # 2. Configure environment
-cp backend/.env.example backend/.env
-# Edit backend/.env — set JWT_SECRET_KEY and your AI provider keys
+cp backend/.env backend/.env  # already exists — just edit it
 
+# Edit backend/.env — set JWT_SECRET_KEY and your AI provider keys
 # 3. Build and start all services
 docker compose up --build
 ```
@@ -49,7 +49,6 @@ source .venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
 
 # Configure environment
-cp .env.example .env
 # Edit .env — set JWT_SECRET_KEY, DATABASE_URL, and AI provider keys
 
 # Run database migrations
