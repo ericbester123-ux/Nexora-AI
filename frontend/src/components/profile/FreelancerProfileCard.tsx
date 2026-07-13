@@ -3,36 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-  ExternalLink, CheckCircle2, XCircle, Loader2, RefreshCw, User, Briefcase,
-} from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Loader2, RefreshCw, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { marketplaceService } from "@/services/marketplace.service";
 import type { MarketplaceAccount } from "@/types/marketplace";
-
-function MailIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="20" height="16" x="2" y="4" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-    </svg>
-  );
-}
-
-function LogInIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-      <polyline points="10 17 15 12 10 7" />
-      <line x1="15" x2="3" y1="12" y2="12" />
-    </svg>
-  );
-}
 
 function StarIcon({ className }: { className?: string }) {
   return (
@@ -51,11 +27,19 @@ function ShieldCheckIcon({ className }: { className?: string }) {
   );
 }
 
+function LogInIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" x2="3" y1="12" y2="12" />
+    </svg>
+  );
+}
+
 export function FreelancerProfileCard() {
   const [account, setAccount] = useState<MarketplaceAccount | null>(null);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [savingEmail, setSavingEmail] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
@@ -63,9 +47,7 @@ export function FreelancerProfileCard() {
     try {
       setLoading(true);
       const accounts = await marketplaceService.getAccounts();
-      const fl = accounts.find((a) => a.provider === "freelancer");
-      setAccount(fl || null);
-      if (fl?.email) setEmail(fl.email);
+      setAccount(accounts.find((a) => a.provider === "freelancer") || null);
     } catch {
     } finally {
       setLoading(false);
@@ -76,22 +58,7 @@ export function FreelancerProfileCard() {
     fetchAccount();
   }, [fetchAccount]);
 
-  const isConnected = account?.external_user_id && account?.has_valid_token;
-  const isEmailOnly = account?.email && !account?.external_user_id;
-
-  const handleSaveEmail = async () => {
-    if (!email.trim()) return;
-    setSavingEmail(true);
-    try {
-      const result = await marketplaceService.linkByEmail("freelancer", email.trim());
-      toast.success(result.message);
-      await fetchAccount();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.detail || e.message || "Failed to save email");
-    } finally {
-      setSavingEmail(false);
-    }
-  };
+  const isConnected = !!(account?.external_user_id && account?.has_valid_token);
 
   const handleOAuth = useCallback(async () => {
     try {
@@ -171,7 +138,6 @@ export function FreelancerProfileCard() {
       await marketplaceService.disconnect(account.id);
       toast.success("Freelancer account disconnected.");
       setAccount(null);
-      setEmail("");
     } catch (e: any) {
       toast.error(e?.response?.data?.detail || e.message || "Failed to disconnect");
     }
@@ -193,10 +159,8 @@ export function FreelancerProfileCard() {
             {loading
               ? "Checking connection..."
               : isConnected
-                ? "Connected and syncing"
-                : isEmailOnly
-                  ? "Email saved — complete with OAuth"
-                  : "Not connected"}
+                ? "Connected — syncing projects and profile data"
+                : "Not connected"}
           </p>
         </div>
         {!loading && isConnected && (
@@ -239,7 +203,7 @@ export function FreelancerProfileCard() {
               {account.projects_completed != null && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Briefcase className="h-4 w-4" />
-                  <span>{account.projects_completed} projects</span>
+                  <span>{account.projects_completed} projects completed</span>
                 </div>
               )}
               {account.verification_status && (
@@ -258,9 +222,7 @@ export function FreelancerProfileCard() {
               )}
             </div>
 
-            <Separator />
-
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
                 {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                 Sync Now
@@ -274,52 +236,20 @@ export function FreelancerProfileCard() {
         )}
 
         {!loading && !isConnected && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="freelancer-email">Freelancer Email</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="freelancer-email"
-                  type="email"
-                  placeholder="your@freelancer.email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleSaveEmail}
-                  disabled={savingEmail || !email.trim()}
-                >
-                  {savingEmail ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MailIcon className="h-4 w-4 mr-1" />}
-                  Save
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enter your Freelancer email as a reference. Then sign in with Freelancer to link your account and pull through your data.
-              </p>
-            </div>
-
-            <div className="relative">
-              <Separator className="my-2" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-card px-2 text-xs text-muted-foreground">or</span>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <Button onClick={handleOAuth} disabled={connecting} size="lg" className="w-full">
-                {connecting ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <LogInIcon className="h-5 w-5 mr-2" />
-                )}
-                Sign in with Freelancer
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                Authorize Nexora AI to access your Freelancer profile, projects, and bids.
-              </p>
-            </div>
-          </>
+          <div className="text-center py-4">
+            <Button onClick={handleOAuth} disabled={connecting} size="lg" className="w-full">
+              {connecting ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <LogInIcon className="h-5 w-5 mr-2" />
+              )}
+              Sign in with Freelancer
+            </Button>
+            <p className="text-xs text-muted-foreground mt-3">
+              Authorize Nexora AI to access your Freelancer profile, projects, and bids.
+              All data is synced automatically and kept up to date.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

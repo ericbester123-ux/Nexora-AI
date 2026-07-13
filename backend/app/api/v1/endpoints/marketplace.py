@@ -183,15 +183,20 @@ async def get_auth_url(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported provider: {provider}")
 
     settings = get_settings()
+
+    if not settings.FREELANCER_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Freelancer.com integration is not configured. Set FREELANCER_CLIENT_ID in the environment.",
+        )
+
     freelancer_provider = FreelancerProvider(sandbox=False)
 
     state = secrets.token_urlsafe(32)
     redirect_uri = f"{settings.FRONTEND_URL}/api/integrations/freelancer/callback"
 
-    # Build auth URL with actual client_id
     auth_url = await freelancer_provider.get_auth_url(state, redirect_uri)
-    if settings.FREELANCER_CLIENT_ID:
-        auth_url = f"{auth_url}&client_id={settings.FREELANCER_CLIENT_ID}"
+    auth_url = f"{auth_url}&client_id={settings.FREELANCER_CLIENT_ID}"
 
     return MarketplaceAuthUrlResponse(auth_url=auth_url, state=state)
 
