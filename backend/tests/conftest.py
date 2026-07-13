@@ -30,7 +30,21 @@ from app.database.base import Base
 from app.database.session import get_db
 from app.models import (  # noqa: F401 - register metadata
     AIPreference,
+    AuditLog,
+    Client,
+    ImportHistory,
     NotificationPreference,
+    Opportunity,
+    Project,
+    ProjectCategory,
+    ProjectCategoryLink,
+    ProjectTechnology,
+    ProposalNote,
+    ProposalStatusHistory,
+    ProposalTemplate,
+    Technology,
+    ProposalVersion,
+    AIUsageLog,
     User,
     UserPreference,
 )
@@ -56,6 +70,12 @@ async def db_session(db_engine) -> AsyncSession:
     session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     async with session_factory() as session:
         yield session
+
+
+@pytest_asyncio.fixture
+async def session_factory(db_engine):
+    """Session factory for tests that need direct DB access."""
+    return async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
 
 @pytest_asyncio.fixture

@@ -48,7 +48,7 @@ class AuthService:
         self._revoked_tokens = revoked_token_repository
         self._access_token_expire_minutes = access_token_expire_minutes
 
-    async def register(self, payload: UserCreate) -> tuple[User, TokenResponse]:
+    async def register(self, payload: UserCreate) -> User:
         """
         Register a new user.
 
@@ -69,8 +69,7 @@ class AuthService:
         )
         logger.info("New user registered.", extra={"event": "user_registered", "user_id": str(user.id)})
 
-        tokens = self._issue_tokens(user.id)
-        return user, tokens
+        return user
 
     async def authenticate(self, email: str, password: str) -> tuple[User, TokenResponse]:
         """

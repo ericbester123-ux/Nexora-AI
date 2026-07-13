@@ -18,19 +18,49 @@ from app.core.exceptions import AuthenticationError, NotFoundError
 from app.core.security import TokenType, decode_token
 from app.database.session import get_db
 from app.models.user import User
+from app.infrastructure.llm import LLMProvider
+from app.infrastructure.llm import get_llm_provider as create_llm_provider
+from app.repositories.ai_usage_log_repository import AIUsageLogRepository
+from app.repositories.audit_log_repository import AuditLogRepository
+from app.repositories.category_repository import CategoryRepository
+from app.repositories.client_repository import ClientRepository
+from app.repositories.opportunity_repository import OpportunityRepository
 from app.repositories.preference_repository import (
     AIPreferenceRepository,
     NotificationPreferenceRepository,
     UserPreferenceRepository,
 )
+from app.repositories.proposal_note_repository import ProposalNoteRepository
+from app.repositories.proposal_repository import ProposalRepository
+from app.repositories.proposal_status_history_repository import (
+    ProposalStatusHistoryRepository,
+)
+from app.repositories.proposal_template_repository import ProposalTemplateRepository
+from app.repositories.proposal_version_repository import ProposalVersionRepository
 from app.repositories.revoked_token_repository import RevokedTokenRepository
+from app.repositories.technology_repository import TechnologyRepository
 from app.repositories.user_repository import UserRepository
+from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
+from app.services.category_service import CategoryService
+from app.services.client_service import ClientService
 from app.services.preference_service import (
     AIPreferenceService,
     NotificationPreferenceService,
     UserPreferenceService,
 )
+from app.services.proposal_generation_service import ProposalGenerationService
+from app.services.proposal_note_service import ProposalNoteService
+from app.services.proposal_review_service import ProposalReviewService
+from app.services.proposal_service import ProposalService
+from app.services.proposal_template_service import ProposalTemplateService
+from app.services.proposal_evaluator import ProposalEvaluator
+from app.services.proposal_improver import ProposalImprover
+from app.services.prompt_builder import PromptBuilder
+from app.services.scoring_service import ScoringService
+from app.services.technology_service import TechnologyService
+from app.repositories.project_repository import ProjectRepository
+from app.services.project_service import ProjectService
 from app.services.user_service import UserService
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -67,7 +97,31 @@ def get_notification_preference_repository(
     return NotificationPreferenceRepository(session)
 
 
+def get_proposal_template_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProposalTemplateRepository:
+    return ProposalTemplateRepository(session)
+
+
+def get_proposal_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProposalRepository:
+    return ProposalRepository(session)
+
+
 # --- Service dependencies ---
+
+
+def get_category_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> CategoryRepository:
+    return CategoryRepository(session)
+
+
+def get_category_service(
+    category_repository: Annotated[CategoryRepository, Depends(get_category_repository)],
+) -> CategoryService:
+    return CategoryService(category_repository)
 
 
 def get_auth_service(
@@ -91,6 +145,30 @@ def get_user_service(
     return UserService(user_repository)
 
 
+def get_proposal_template_service(
+    repo: Annotated[ProposalTemplateRepository, Depends(get_proposal_template_repository)],
+) -> ProposalTemplateService:
+    return ProposalTemplateService(repo)
+
+
+def get_proposal_service(
+    proposal_repository: Annotated[ProposalRepository, Depends(get_proposal_repository)],
+) -> ProposalService:
+    return ProposalService(repository=proposal_repository)
+
+
+def get_project_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectRepository:
+    return ProjectRepository(session)
+
+
+def get_project_service(
+    project_repository: Annotated[ProjectRepository, Depends(get_project_repository)],
+) -> ProjectService:
+    return ProjectService(project_repository)
+
+
 def get_user_preference_service(
     preference_repository: Annotated[UserPreferenceRepository, Depends(get_user_preference_repository)],
 ) -> UserPreferenceService:
@@ -110,6 +188,170 @@ def get_notification_preference_service(
     ],
 ) -> NotificationPreferenceService:
     return NotificationPreferenceService(notification_preference_repository)
+
+
+def get_technology_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> TechnologyRepository:
+    return TechnologyRepository(session)
+
+
+def get_technology_service(
+    technology_repository: Annotated[TechnologyRepository, Depends(get_technology_repository)],
+) -> TechnologyService:
+    return TechnologyService(repository=technology_repository)
+
+
+def get_client_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ClientRepository:
+    return ClientRepository(session)
+
+
+def get_client_service(
+    client_repository: Annotated[ClientRepository, Depends(get_client_repository)],
+) -> ClientService:
+    return ClientService(client_repository)
+
+
+# --- LLM / Proposal Generation dependencies ---
+
+
+def get_opportunity_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> OpportunityRepository:
+    return OpportunityRepository(session)
+
+
+def get_proposal_version_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProposalVersionRepository:
+    return ProposalVersionRepository(session)
+
+
+def get_ai_usage_log_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> AIUsageLogRepository:
+    return AIUsageLogRepository(session)
+
+
+def get_llm_provider() -> LLMProvider:
+    return create_llm_provider()
+
+
+def get_prompt_builder() -> PromptBuilder:
+    return PromptBuilder()
+
+
+def get_scoring_service(
+    opportunity_repository: Annotated[OpportunityRepository, Depends(get_opportunity_repository)],
+) -> ScoringService:
+    from app.services.opportunity_service import OpportunityService
+
+    opp_service = OpportunityService(opportunity_repository)
+    return ScoringService(opp_service)
+
+
+def get_proposal_generation_service(
+    proposal_repository: Annotated[ProposalRepository, Depends(get_proposal_repository)],
+    proposal_version_repository: Annotated[ProposalVersionRepository, Depends(get_proposal_version_repository)],
+    ai_usage_log_repository: Annotated[AIUsageLogRepository, Depends(get_ai_usage_log_repository)],
+    opportunity_repository: Annotated[OpportunityRepository, Depends(get_opportunity_repository)],
+    proposal_template_repository: Annotated[ProposalTemplateRepository, Depends(get_proposal_template_repository)],
+    scoring_service: Annotated[ScoringService, Depends(get_scoring_service)],
+    llm_provider: Annotated[LLMProvider, Depends(get_llm_provider)],
+) -> ProposalGenerationService:
+    return ProposalGenerationService(
+        proposal_repository=proposal_repository,
+        proposal_version_repository=proposal_version_repository,
+        ai_usage_log_repository=ai_usage_log_repository,
+        opportunity_repository=opportunity_repository,
+        proposal_template_repository=proposal_template_repository,
+        scoring_service=scoring_service,
+        llm_provider=llm_provider,
+    )
+
+
+# --- Proposal Improver / Evaluator ---
+
+
+def get_proposal_improver(
+    proposal_repository: Annotated[ProposalRepository, Depends(get_proposal_repository)],
+    proposal_version_repository: Annotated[ProposalVersionRepository, Depends(get_proposal_version_repository)],
+    ai_usage_log_repository: Annotated[AIUsageLogRepository, Depends(get_ai_usage_log_repository)],
+    opportunity_repository: Annotated[OpportunityRepository, Depends(get_opportunity_repository)],
+    llm_provider: Annotated[LLMProvider, Depends(get_llm_provider)],
+) -> ProposalImprover:
+    return ProposalImprover(
+        proposal_repository=proposal_repository,
+        proposal_version_repository=proposal_version_repository,
+        ai_usage_log_repository=ai_usage_log_repository,
+        opportunity_repository=opportunity_repository,
+        llm_provider=llm_provider,
+    )
+
+
+def get_proposal_evaluator(
+    ai_usage_log_repository: Annotated[AIUsageLogRepository, Depends(get_ai_usage_log_repository)],
+    opportunity_repository: Annotated[OpportunityRepository, Depends(get_opportunity_repository)],
+    llm_provider: Annotated[LLMProvider, Depends(get_llm_provider)],
+) -> ProposalEvaluator:
+    return ProposalEvaluator(
+        ai_usage_log_repository=ai_usage_log_repository,
+        opportunity_repository=opportunity_repository,
+        llm_provider=llm_provider,
+    )
+
+
+# --- Proposal Review dependencies ---
+
+
+def get_proposal_note_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProposalNoteRepository:
+    return ProposalNoteRepository(session)
+
+
+def get_audit_log_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> AuditLogRepository:
+    return AuditLogRepository(session)
+
+
+def get_proposal_status_history_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProposalStatusHistoryRepository:
+    return ProposalStatusHistoryRepository(session)
+
+
+def get_audit_service(
+    audit_log_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
+) -> AuditService:
+    return AuditService(audit_log_repository)
+
+
+def get_proposal_note_service(
+    proposal_note_repository: Annotated[ProposalNoteRepository, Depends(get_proposal_note_repository)],
+) -> ProposalNoteService:
+    return ProposalNoteService(proposal_note_repository)
+
+
+def get_proposal_review_service(
+    proposal_repository: Annotated[ProposalRepository, Depends(get_proposal_repository)],
+    proposal_version_repository: Annotated[ProposalVersionRepository, Depends(get_proposal_version_repository)],
+    proposal_status_history_repository: Annotated[
+        ProposalStatusHistoryRepository, Depends(get_proposal_status_history_repository)
+    ],
+    audit_log_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
+    opportunity_repository: Annotated[OpportunityRepository, Depends(get_opportunity_repository)],
+) -> ProposalReviewService:
+    return ProposalReviewService(
+        proposal_repository=proposal_repository,
+        proposal_version_repository=proposal_version_repository,
+        proposal_status_history_repository=proposal_status_history_repository,
+        audit_log_repository=audit_log_repository,
+        opportunity_repository=opportunity_repository,
+    )
 
 
 # --- Auth resolvers ---

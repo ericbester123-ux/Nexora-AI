@@ -98,6 +98,7 @@ class UserResponse(UserBase):
     role: UserRole
     is_active: bool
     is_verified: bool
+    subscription_status: str
     first_name: str | None = None
     last_name: str | None = None
     display_name: str | None = None
@@ -112,3 +113,10 @@ class UserResponse(UserBase):
     secondary_skills: list[str] | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class UserSubscriptionUpdate(BaseModel):
+    """Payload for updating a user's subscription status."""
+
+    subscription_status: str = Field(..., pattern="^(pending|active|cancelled|expired)$")
+    is_active: bool | None = None

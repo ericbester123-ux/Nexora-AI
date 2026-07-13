@@ -38,8 +38,9 @@ class FakeUserRepository:
             email=email.lower(),
             full_name=full_name,
             hashed_password=hashed_password,
-            is_active=True,
+            is_active=False,
             is_verified=False,
+            subscription_status="pending",
         )
         self._users[user.id] = user
         return user
@@ -75,14 +76,13 @@ def auth_service() -> AuthService:
 
 
 class TestRegister:
-    async def test_register_creates_user_and_returns_tokens(self, auth_service: AuthService):
+    async def test_register_creates_user_and_returns_user(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
 
         assert user.email == "jane@example.com"
-        assert tokens.access_token
-        assert tokens.refresh_token
-        assert tokens.token_type == "bearer"
+        assert user.is_active is False
+        assert user.subscription_status == "pending"
 
     async def test_register_rejects_duplicate_email(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
@@ -93,14 +93,17 @@ class TestRegister:
 
     async def test_registered_password_is_hashed_not_stored_in_plaintext(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, _ = await auth_service.register(payload)
+        user = await auth_service.register(payload)
         assert user.hashed_password != "StrongPass1"
 
 
 class TestAuthenticate:
     async def test_authenticate_succeeds_with_correct_credentials(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
 
         user, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
         assert user.email == "jane@example.com"
@@ -119,8 +122,16 @@ class TestAuthenticate:
 
     async def test_authenticate_fails_for_deactivated_account(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, _ = await auth_service.register(payload)
+        user = await auth_service.register(payload)
         user.is_active = False
+        await auth_service._users.update(user)
+
+        with pytest.raises(AuthenticationError):
+            await auth_service.authenticate("jane@example.com", "StrongPass1")
+
+    async def test_authenticate_fails_for_pending_subscription(self, auth_service: AuthService):
+        payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
+        await auth_service.register(payload)
 
         with pytest.raises(AuthenticationError):
             await auth_service.authenticate("jane@example.com", "StrongPass1")
@@ -129,7 +140,11 @@ class TestAuthenticate:
 class TestRefresh:
     async def test_refresh_issues_new_token_pair(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
+        _, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
 
         new_tokens = await auth_service.refresh(tokens.refresh_token)
         assert new_tokens.access_token != tokens.access_token
@@ -137,7 +152,11 @@ class TestRefresh:
 
     async def test_refresh_rejects_reused_refresh_token(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        _user, tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
+        _, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
 
         await auth_service.refresh(tokens.refresh_token)
 
@@ -146,7 +165,11 @@ class TestRefresh:
 
     async def test_refresh_rejects_access_token_used_as_refresh_token(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        _user, tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
+        _, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
 
         with pytest.raises(Exception):
             await auth_service.refresh(tokens.access_token)
@@ -160,7 +183,11 @@ class TestRefresh:
 class TestLogout:
     async def test_logout_revokes_access_token(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        _user, tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
+        _, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
         decoded = decode_token(tokens.access_token, expected_type=TokenType.ACCESS)
 
         await auth_service.logout(tokens.access_token)
@@ -171,7 +198,11 @@ class TestLogout:
 class TestChangePassword:
     async def test_change_password_updates_hash(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, _tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
+        _, tokens = await auth_service.authenticate("jane@example.com", "StrongPass1")
 
         await auth_service.change_password(user.id, "StrongPass1", "NewStrongPass2")
 
@@ -182,7 +213,10 @@ class TestChangePassword:
 
     async def test_change_password_rejects_wrong_current_password(self, auth_service: AuthService):
         payload = UserCreate(email="jane@example.com", full_name="Jane Doe", password="StrongPass1")
-        user, _tokens = await auth_service.register(payload)
+        user = await auth_service.register(payload)
+        user.is_active = True
+        user.subscription_status = "active"
+        await auth_service._users.update(user)
 
         with pytest.raises(AuthenticationError):
             await auth_service.change_password(user.id, "WrongPassword1", "NewStrongPass2")

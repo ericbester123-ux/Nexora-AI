@@ -64,6 +64,34 @@ class Settings(BaseSettings):
     )
     RATE_LIMIT_DEFAULT: str = Field(default="100/minute")
 
+    # --- LLM / AI Provider ---
+    LLM_PROVIDER: str = Field(default="openai")
+    LLM_MODEL: str = Field(default="gpt-4o-mini")
+    LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0)
+    LLM_MAX_TOKENS: int = Field(default=2048, ge=64, le=16384)
+    LLM_TOP_P: float = Field(default=1.0, ge=0.0, le=1.0)
+    LLM_RETRY_COUNT: int = Field(default=2, ge=0, le=10)
+    LLM_TIMEOUT: int = Field(default=60, ge=5, le=300)
+    LLM_SYSTEM_PROMPT: str = Field(
+        default="You are an expert freelance proposal writer. Generate professional, tailored proposals.",
+    )
+    OPENAI_API_KEY: str | None = Field(default=None)
+    OPENAI_BASE_URL: str | None = Field(default=None)
+    ANTHROPIC_API_KEY: str | None = Field(default=None)
+    ANTHROPIC_MODEL: str | None = Field(default=None)
+    GEMINI_API_KEY: str | None = Field(default=None)
+    GEMINI_MODEL: str | None = Field(default=None)
+    DEEPSEEK_API_KEY: str | None = Field(default=None)
+    DEEPSEEK_MODEL: str | None = Field(default=None)
+    DEEPSEEK_BASE_URL: str = Field(default="https://api.deepseek.com")
+
+    # --- Freelancer API ---
+    FREELANCER_OAUTH_TOKEN: str | None = Field(default=None)
+    FREELANCER_API_URL: str = Field(default="https://www.freelancer.com")
+    FREELANCER_CLIENT_ID: str | None = Field(default=None)
+    FREELANCER_CLIENT_SECRET: str | None = Field(default=None)
+    FRONTEND_URL: str = Field(default="http://localhost:3000")
+
     # --- Logging ---
     LOG_LEVEL: str = Field(default="INFO")
     LOG_JSON: bool = Field(default=True)
@@ -71,9 +99,16 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _split_cors_origins(cls, value):
-        """Allow CORS_ORIGINS to be provided as a comma-separated string."""
+        """Accept comma-separated string, JSON array string, or list."""
         if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
+            value = value.strip()
+            if value.startswith("[") and value.endswith("]"):
+                import json
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+            return [origin.strip().strip("\"'") for origin in value.split(",") if origin.strip()]
         return value
 
     @field_validator("ENVIRONMENT")

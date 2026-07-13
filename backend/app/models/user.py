@@ -2,8 +2,9 @@
 User ORM model.
 """
 
-from sqlalchemy import Boolean, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
 
 from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -17,8 +18,16 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(32), default="user", nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    subscription_status: Mapped[str] = mapped_column(String(32), default="pending", nullable=False)
+
+    # --- Freelancer integration ---
+    freelancer_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    freelancer_oauth_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    freelancer_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    freelancer_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    freelancer_connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # --- Profile fields ---
     first_name: Mapped[str | None] = mapped_column(String(128), nullable=True)

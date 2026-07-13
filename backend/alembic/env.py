@@ -18,8 +18,16 @@ from app.core.config import get_settings
 from app.database.base import Base
 from app.models import (  # noqa: F401 - ensures metadata registration
     AIPreference,
+    Client,
     NotificationPreference,
+    Project,
+    ProjectCategory,
+    ProjectCategoryLink,
+    ProjectTechnology,
+    Proposal,
+    ProposalTemplate,
     RevokedToken,
+    Technology,
     User,
     UserPreference,
 )

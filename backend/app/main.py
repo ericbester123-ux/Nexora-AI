@@ -19,9 +19,10 @@ from app.core.exceptions import DatabaseError
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.logging_config import configure_logging
-from app.database.session import engine
+from app.database.session import AsyncSessionLocal, engine
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.logging_middleware import RequestLoggingMiddleware
+from app.seed import seed_development_data
 
 settings = get_settings()
 
@@ -33,6 +34,18 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application startup/shutdown hooks."""
     logger.info("Starting Nexora AI backend.", extra={"event": "startup", "environment": settings.ENVIRONMENT})
+    
+    # Seed development data in non-production environments
+    if settings.ENVIRONMENT != "production":
+        async with AsyncSessionLocal() as session:
+            try:
+                result = await seed_development_data(session)
+                if result.get("admin_user"):
+                    logger.info("Created default admin user", extra={"event": "seed_admin_created"})
+                logger.info("Development seed completed", extra={"event": "seed_completed", "details": result})
+            except Exception as exc:
+                logger.warning("Seed failed (non-fatal)", extra={"event": "seed_failed", "error": str(exc)})
+
     yield
     logger.info("Shutting down Nexora AI backend.", extra={"event": "shutdown"})
     await engine.dispose()

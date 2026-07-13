@@ -16,6 +16,7 @@ from app.schemas.auth import (
     MessageResponse,
     PasswordChangeRequest,
     RefreshRequest,
+    RegisterResponse,
     TokenResponse,
 )
 from app.schemas.user import UserCreate, UserResponse
@@ -26,7 +27,7 @@ settings = get_settings()
 
 @router.post(
     "/register",
-    response_model=TokenResponse,
+    response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user account",
 )
@@ -35,14 +36,16 @@ async def register(
     request: Request,
     payload: UserCreate,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> TokenResponse:
+) -> RegisterResponse:
     """
-    Create a new user account and return an access/refresh token pair.
+    Create a new user account.
 
     Returns **409 Conflict** if the email is already registered.
+    The account is created but not activated - user must complete subscription
+    before being able to log in.
     """
-    _user, tokens = await auth_service.register(payload)
-    return tokens
+    user = await auth_service.register(payload)
+    return RegisterResponse(message="Account created successfully. Please complete your subscription to activate your account.", email=user.email)
 
 
 @router.post(

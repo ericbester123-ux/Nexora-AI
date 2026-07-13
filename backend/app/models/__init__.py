@@ -6,9 +6,22 @@ every table.
 """
 
 from app.models.revoked_token import RevokedToken
+from app.models.technology import Technology
 from app.models.user import User
 from app.models.user_preference import UserPreference
 from app.models.ai_preference import AIPreference
 from app.models.notification_preference import NotificationPreference
+from app.models.project import Project, ProjectCategoryLink, ProjectTechnology
+from app.models.project_category import ProjectCategory
+from app.models.client import Client
+from app.models.proposal import Proposal
+from app.models.proposal_template import ProposalTemplate
+from app.models.opportunity import Opportunity
+from app.models.import_history import ImportHistory
+from app.models.proposal_version import ProposalVersion
+from app.models.ai_usage_log import AIUsageLog
+from app.models.proposal_note import ProposalNote
+from app.models.audit_log import AuditLog
+from app.models.proposal_status_history import ProposalStatusHistory
 
-__all__ = ["RevokedToken", "User", "UserPreference", "AIPreference", "NotificationPreference"]
+__all__ = ["Proposal", "RevokedToken", "Technology", "User", "UserPreference", "AIPreference", "NotificationPreference", "Project", "ProjectCategoryLink", "ProjectTechnology", "ProjectCategory", "Client", "ProposalTemplate", "Opportunity", "ImportHistory", "ProposalVersion", "AIUsageLog", "ProposalNote", "AuditLog", "ProposalStatusHistory"]

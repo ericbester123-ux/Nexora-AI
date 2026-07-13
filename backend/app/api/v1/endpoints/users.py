@@ -1,16 +1,11 @@
-"""
-User profile endpoints.
-"""
-
+from fastapi import APIRouter, Depends, Request, status
 from typing import Annotated
-
-from fastapi import APIRouter, Depends, Request
 
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.dependencies.auth import CurrentUser, get_auth_service, get_user_service
 from app.schemas.auth import MessageResponse, PasswordChangeRequest
-from app.schemas.user import UserProfileUpdate, UserResponse
+from app.schemas.user import UserProfileUpdate, UserResponse, UserSubscriptionUpdate
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 
@@ -24,6 +19,21 @@ router = APIRouter(prefix="/users", tags=["Users"])
 )
 async def get_me(current_user: CurrentUser) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.patch(
+    "/me/subscription",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update the current authenticated user's subscription status",
+)
+async def update_subscription(
+    payload: UserSubscriptionUpdate,
+    current_user: CurrentUser,
+    user_service: Annotated[UserService, Depends(get_user_service)],
+) -> UserResponse:
+    updated = await user_service.update_subscription(current_user.id, payload)
+    return UserResponse.model_validate(updated)
 
 
 @router.put(
@@ -58,3 +68,17 @@ async def change_password(
         payload.new_password,
     )
     return MessageResponse(message="Password changed successfully.")
+
+
+@router.patch(
+    "/me/subscription",
+    response_model=UserResponse,
+    summary="Update the current authenticated user's subscription status",
+)
+async def update_subscription(
+    payload: UserSubscriptionUpdate,
+    current_user: CurrentUser,
+    user_service: Annotated[UserService, Depends(get_user_service)],
+) -> UserResponse:
+    updated = await user_service.update_subscription(current_user.id, payload)
+    return UserResponse.model_validate(updated)

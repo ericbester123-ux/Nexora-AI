@@ -40,12 +40,19 @@ class PasswordChangeRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    """Standard OAuth2-style token pair returned on login/register/refresh."""
+    """Standard OAuth2-style token pair returned on login/refresh."""
 
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int = Field(description="Access token lifetime in seconds.")
+
+
+class RegisterResponse(BaseModel):
+    """Response for user registration - returns success message without tokens."""
+
+    message: str
+    email: EmailStr
 
 
 class MessageResponse(BaseModel):
